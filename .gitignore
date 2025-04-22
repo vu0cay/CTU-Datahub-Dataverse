@@ -56,9 +56,9 @@ tests/package-lock.json
 venv
 
 # from thumbnail tests in SearchIT
-scripts/search/data/binary/trees.png.thumb140
-src/main/webapp/resources/images/cc0.png.thumb140
-src/main/webapp/resources/images/dataverseproject.png.thumb140
+# scripts/search/data/binary/trees.png.thumb140
+# src/main/webapp/resources/images/cc0.png.thumb140
+# src/main/webapp/resources/images/dataverseproject.png.thumb140
 
 # Docker development volumes
 /conf/keycloak/docker-dev-volumes

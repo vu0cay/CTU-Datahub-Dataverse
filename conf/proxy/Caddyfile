@@ -9,4 +9,8 @@
 		}
 		header_down Location "^https://" "http://"
 	}
+	handle_path /store/* {
+		root * /dv
+		file_server
+	}
 }

@@ -15,7 +15,7 @@ services:
       ENABLE_JDWP: "1"
       ENABLE_RELOAD: "1"
       # SKIP_DEPLOY: "${SKIP_DEPLOY}"
-      SKIP_DEPLOY: "0"
+      SKIP_DEPLOY: "1"
       DATAVERSE_JSF_REFRESH_PERIOD: "1"
       DATAVERSE_FEATURE_API_BEARER_AUTH: "1"
       DATAVERSE_FEATURE_INDEX_HARVESTED_METADATA_SOURCE: "1"
@@ -65,7 +65,8 @@ services:
         -Ddataverse.solr.host=solr
         -Dfile.validation.enabled=true
         -Dfile.validation.jhove.configFile=/opt/payara/appserver/glassfish/domains/domain1/config/jhove.conf
-        #-Ddataverse.lang.directory=/dv/lang
+        -Ddataverse.lang.directory=/dv/lang
+        -Ddataverse.preview.token.secret=SuperSecretToken123
     ports:
       - "8080:8080" # HTTP (Dataverse Application)
       - "4949:4848" # HTTPS (Payara Admin Console)
@@ -140,7 +141,7 @@ services:
     volumes:
       - ./docker-dev-volumes/solr/data:/var/solr
       - ./docker-dev-volumes/solr/conf:/solr-template
-
+      
   dev_solr:
     container_name: "dev_solr"
     hostname: "solr"
@@ -159,6 +160,7 @@ services:
     volumes:
       - ./docker-dev-volumes/solr/data:/var/solr
       - ./docker-dev-volumes/solr/conf:/template
+      - ./docker-dev-volumes/solr/conf/conf:/var/solr/data/collection1/conf
 
   dev_smtp:
     container_name: "dev_smtp"
@@ -173,10 +175,10 @@ services:
       - MAILDEV_MAIL_DIRECTORY=/mail
     networks:
       - dataverse
-    #volumes:
-    #  - ./docker-dev-volumes/smtp/data:/mail
-    tmpfs:
-      - /mail:mode=770,size=128M,uid=1000,gid=1000
+    volumes:
+      - ./docker-dev-volumes/smtp/data:/mail
+    # tmpfs:
+    #   - /mail:mode=770,size=128M,uid=1000,gid=1000
 
   dev_keycloak:
     container_name: "dev_keycloak"
@@ -203,7 +205,9 @@ services:
     image: caddy:2-alpine
     # The command below is enough to enable using the admin gui, but it will not rewrite location headers to HTTP.
     # To achieve rewriting from https:// to http://, we need a simple configuration file
-    #command: ["caddy", "reverse-proxy", "-f", ":4848", "-t", "https://dataverse:4848", "--insecure"]
+    # command: ["caddy", "reverse-proxy", "-f", ":4848", "-t", "https://dataverse:4848", "--insecure"]
+    # command: ["caddy", "reverse-proxy", "-f", ":9080", "-t", "http://previewers-provider:9080", "--insecure"]
+
     command: ["caddy", "run", "-c", "/Caddyfile"]
     ports:
       - "4848:4848" # Will expose Payara Admin Console (HTTPS) as HTTP
@@ -248,7 +252,7 @@ services:
     environment:
       MINIO_ROOT_USER: 4cc355_k3y
       MINIO_ROOT_PASSWORD: s3cr3t_4cc355_k3y
-    command: server /data
+    command: server /data --console-address ":9001"
 
   previewers-provider:
     container_name: previewers-provider
@@ -263,6 +267,7 @@ services:
       - NGINX_HTTP_PORT=9080
       - PREVIEWERS_PROVIDER_URL=http://localhost:9080
       - VERSIONS="v1.4,betatest"
+      - PREVIEW_TOKEN_SECRET=SuperSecretToken123
     # https://docs.docker.com/reference/compose-file/services/#platform
     # https://github.com/fabric8io/docker-maven-plugin/issues/1750
     platform: linux/amd64
@@ -274,13 +279,15 @@ services:
     networks:
       - dataverse
     environment:
+      # - DATAVERSE_URL=http://dataverse:8080
       - DATAVERSE_URL=http://dataverse:8080
-      - TIMEOUT=10m
+      - TIMEOUT=5m
       - PREVIEWERS_PROVIDER_URL=http://localhost:9080
       # Uncomment to specify which previewers you want. Otherwise you get all of them.
-      #- INCLUDE_PREVIEWERS=text,html,pdf,csv,comma-separated-values,tsv,tab-separated-values,jpeg,png,gif,markdown,x-markdown
+      - INCLUDE_PREVIEWERS=text,html,pdf,csv,comma-separated-values,tsv,tab-separated-values,jpeg,png,gif,markdown,x-markdown
       - EXCLUDE_PREVIEWERS=
       - REMOVE_EXISTING=true
+      - TOKEN_SECRET=SuperSecretToken123
     command:
       - deploy
     restart: "no"
